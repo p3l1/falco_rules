@@ -1,0 +1,5 @@
+{
+    "yaml.schemas": {
+        ".vscode/schema/falco.json": "*_rules.yaml"
+    }
+}
