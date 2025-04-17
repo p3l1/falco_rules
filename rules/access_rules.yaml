@@ -46,16 +46,16 @@
     and ssh_port
   exceptions:
     - name: e_allowed_ssh_networks_outgoing
-      fields: [fd.rnet, evt.type]
+      fields: [fd.rnet, fd.is_server]
       comps: [in, =]
       values:
-        - [allowed_ssh_networks_outgoing, connect]
+        - [allowed_ssh_networks_outgoing, false]
 
     - name: e_allowed_ssh_networks_incoming
-      fields: [fd.cnet, evt.type]
-      comps: [in, in]
+      fields: [fd.cnet, fd.is_server]
+      comps: [in, =]
       values:
-        - [allowed_ssh_networks_incoming, [accept, listen]]
+        - [allowed_ssh_networks_incoming, true]
   output: >
     Disallowed SSH connection (connection=%fd.name
     lport=%fd.lport rport=%fd.rport fd_type=%fd.type
