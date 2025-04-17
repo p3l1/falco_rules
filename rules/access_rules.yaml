@@ -1,39 +1,28 @@
 ---
 - macro: inbound
   condition: >
-    (((evt.type in (accept,listen) and evt.dir=<)) or
+    (((evt.type in (accept,listen) and evt.dir=<)) and
      (fd.typechar = 4 or fd.typechar = 6) and
-     (fd.ip != "0.0.0.0" and fd.net != "127.0.0.0/8") and (evt.rawres >= 0 or evt.res = EINPROGRESS))
+     (fd.ip != "0.0.0.0" and fd.net != "127.0.0.0/8") and
+     (fd.ip != "::1") and
+     (evt.rawres >= 0 or evt.res = EINPROGRESS))
 
 - macro: inbound_outbound
   condition: >
-    (((evt.type in (accept,listen,connect) and evt.dir=<)) or
+    (((evt.type in (accept,listen,connect) and evt.dir=<)) and
      (fd.typechar = 4 or fd.typechar = 6) and
-     (fd.ip != "0.0.0.0" and fd.net != "127.0.0.0/8") and (evt.rawres >= 0 or evt.res = EINPROGRESS))
+     (fd.ip != "0.0.0.0" and fd.net != "127.0.0.0/8") and
+     (fd.ip != "::1") and
+     (evt.rawres >= 0 or evt.res = EINPROGRESS))
 
 - macro: ssh_port
   condition: (fd.sport=22)
 
-# Allowed CIDR ranges for incoming non interactive SSH connections.
+# Allowed CIDR range for interactive SSH connections.
 # This is a placeholder. You should replace it with the actual CIDR ranges
 # that are allowed in your environment.
-- list: allowed_ssh_networks_incoming
-  items:
-    - "0.0.0.0/0"
-
-# Allowed CIDR ranges for outgoing SSH connections.
-# This is a placeholder. You should replace it with the actual CIDR ranges
-# that are allowed in your environment.
-- list: allowed_ssh_networks_outgoing
-  items:
-    - "0.0.0.0/0"
-
-# Allowed CIDR ranges for interactive SSH connections.
-# This is a placeholder. You should replace it with the actual CIDR ranges
-# that are allowed in your environment.
-- list: allowed_ssh_networks_interactive
-  items:
-    - "0.0.0.0/0"
+- macro: corporate_network
+  condition: (fd.cnet = "0.0.0.0/0")
 
 - rule: Disallowed SSH connection
   tags: [thesis, ssh]
@@ -46,16 +35,16 @@
     and ssh_port
   exceptions:
     - name: e_allowed_ssh_networks_outgoing
-      fields: [fd.rnet, evt.type]
-      comps: [in, =]
+      fields: [fd.rnet, fd.is_server]
+      comps: [=, =]
       values:
-        - [allowed_ssh_networks_outgoing, connect]
+        - ["0.0.0.0/0", false]
 
     - name: e_allowed_ssh_networks_incoming
-      fields: [fd.cnet, evt.type]
-      comps: [in, in]
+      fields: [fd.cnet, fd.is_server]
+      comps: [=, =]
       values:
-        - [allowed_ssh_networks_incoming, [accept, listen]]
+        - ["0.0.0.0/0", true]
   output: >
     Disallowed SSH connection (connection=%fd.name
     lport=%fd.lport rport=%fd.rport fd_type=%fd.type
@@ -66,7 +55,7 @@
     terminal=%proc.tty %container.info)
   priority: WARNING
 
-- rule: Monitor incoming SSH connections
+- rule: Monitor SSH connections from corporate network
   tags: [thesis, ssh, interactive]
   enabled: true
   desc: >
@@ -74,13 +63,7 @@
   condition: >
     inbound
     and ssh_port
-    and fd.cnet in (allowed_ssh_networks_interactive)
-  exceptions:
-    - name: e_allowed_ssh_networks_incoming
-      fields: [fd.cnet, fd.is_server]
-      comps: [in, =]
-      values:
-        - [allowed_ssh_networks_incoming, true]
+    and corporate_network
   output: >
     Interactive SSH connection (connection=%fd.name
     lport=%fd.lport rport=%fd.rport fd_type=%fd.type

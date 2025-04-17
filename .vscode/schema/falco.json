@@ -1,0 +1,197 @@
+{
+    "$schema": "http://json-schema.org/draft-06/schema#",
+    "definitions": {
+        "Alternative": {
+            "additionalProperties": false,
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "name",
+                "version"
+            ],
+            "title": "Alternative",
+            "type": "object"
+        },
+        "Exception": {
+            "additionalProperties": false,
+            "properties": {
+                "comps": {},
+                "fields": {},
+                "name": {
+                    "type": "string"
+                },
+                "values": {}
+            },
+            "required": [
+                "name",
+                "values"
+            ],
+            "title": "Exception",
+            "type": "object"
+        },
+        "FalcoRule": {
+            "additionalProperties": false,
+            "properties": {
+                "append": {
+                    "type": "boolean"
+                },
+                "condition": {
+                    "type": "string"
+                },
+                "desc": {
+                    "type": "string"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "exceptions": {
+                    "items": {
+                        "$ref": "#/definitions/Exception"
+                    },
+                    "type": "array"
+                },
+                "items": {
+                    "items": {
+                        "$ref": "#/definitions/Item"
+                    },
+                    "type": "array"
+                },
+                "list": {
+                    "type": "string"
+                },
+                "macro": {
+                    "type": "string"
+                },
+                "output": {
+                    "type": "string"
+                },
+                "override": {
+                    "$ref": "#/definitions/Override"
+                },
+                "priority": {
+                    "$ref": "#/definitions/Priority"
+                },
+                "required_engine_version": {
+                    "type": "string"
+                },
+                "required_plugin_versions": {
+                    "items": {
+                        "$ref": "#/definitions/RequiredPluginVersion"
+                    },
+                    "type": "array"
+                },
+                "rule": {
+                    "type": "string"
+                },
+                "source": {
+                    "type": "string"
+                },
+                "tags": {
+                    "items": {
+                        "type": "string"
+                    },
+                    "type": "array"
+                }
+            },
+            "required": [],
+            "title": "FalcoRule",
+            "type": "object"
+        },
+        "Item": {
+            "anyOf": [
+                {
+                    "type": "integer"
+                },
+                {
+                    "type": "string"
+                }
+            ],
+            "title": "Item"
+        },
+        "OverriddenItem": {
+            "enum": [
+                "append",
+                "replace"
+            ],
+            "title": "Priority",
+            "type": "string"
+        },
+        "Override": {
+            "additionalProperties": false,
+            "minProperties": 1,
+            "properties": {
+                "condition": {
+                    "$ref": "#/definitions/OverriddenItem"
+                },
+                "desc": {
+                    "$ref": "#/definitions/OverriddenItem"
+                },
+                "enabled": {
+                    "$ref": "#/definitions/OverriddenItem"
+                },
+                "exceptions": {
+                    "$ref": "#/definitions/OverriddenItem"
+                },
+                "items": {
+                    "$ref": "#/definitions/OverriddenItem"
+                },
+                "output": {
+                    "$ref": "#/definitions/OverriddenItem"
+                },
+                "priority": {
+                    "$ref": "#/definitions/OverriddenItem"
+                }
+            },
+            "title": "Override",
+            "type": "object"
+        },
+        "Priority": {
+            "enum": [
+                "EMERGENCY",
+                "ALERT",
+                "CRITICAL",
+                "ERROR",
+                "WARNING",
+                "NOTICE",
+                "INFO",
+                "INFORMATIONAL",
+                "DEBUG"
+            ],
+            "title": "Priority",
+            "type": "string"
+        },
+        "RequiredPluginVersion": {
+            "additionalProperties": false,
+            "properties": {
+                "alternatives": {
+                    "items": {
+                        "$ref": "#/definitions/Alternative"
+                    },
+                    "type": "array"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "name",
+                "version"
+            ],
+            "title": "RequiredPluginVersion",
+            "type": "object"
+        }
+    },
+    "items": {
+        "$ref": "#/definitions/FalcoRule"
+    },
+    "type": "array"
+}
