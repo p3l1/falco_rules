@@ -2,6 +2,11 @@ name: Syntax Check
 
 on:
   push:
+    paths:
+      - rules/**
+      - .github/workflows/syntax_check.yaml
+  pull_request:
+    types: [synchronize]
 
 jobs:
   syntax-check:
