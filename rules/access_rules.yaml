@@ -14,26 +14,11 @@
 - macro: ssh_port
   condition: (fd.sport=22)
 
-# Allowed CIDR ranges for incoming non interactive SSH connections.
+# Allowed CIDR range for interactive SSH connections.
 # This is a placeholder. You should replace it with the actual CIDR ranges
 # that are allowed in your environment.
-- list: allowed_ssh_networks_incoming
-  items:
-    - "0.0.0.0/0"
-
-# Allowed CIDR ranges for outgoing SSH connections.
-# This is a placeholder. You should replace it with the actual CIDR ranges
-# that are allowed in your environment.
-- list: allowed_ssh_networks_outgoing
-  items:
-    - "0.0.0.0/0"
-
-# Allowed CIDR ranges for interactive SSH connections.
-# This is a placeholder. You should replace it with the actual CIDR ranges
-# that are allowed in your environment.
-- list: allowed_ssh_networks_interactive
-  items:
-    - "0.0.0.0/0"
+- macro: corporate_network
+  condition: (fd.cnet = "192.168.0.0/16")
 
 - rule: Disallowed SSH connection
   tags: [thesis, ssh]
@@ -47,15 +32,15 @@
   exceptions:
     - name: e_allowed_ssh_networks_outgoing
       fields: [fd.rnet, fd.is_server]
-      comps: [in, =]
+      comps: [=, =]
       values:
-        - [allowed_ssh_networks_outgoing, false]
+        - ["0.0.0.0/0", false]
 
     - name: e_allowed_ssh_networks_incoming
       fields: [fd.cnet, fd.is_server]
-      comps: [in, =]
+      comps: [=, =]
       values:
-        - [allowed_ssh_networks_incoming, true]
+        - ["0.0.0.0/0", true]
   output: >
     Disallowed SSH connection (connection=%fd.name
     lport=%fd.lport rport=%fd.rport fd_type=%fd.type
@@ -66,7 +51,7 @@
     terminal=%proc.tty %container.info)
   priority: WARNING
 
-- rule: Monitor incoming SSH connections
+- rule: Monitor SSH connections from corporate network
   tags: [thesis, ssh, interactive]
   enabled: true
   desc: >
@@ -74,13 +59,7 @@
   condition: >
     inbound
     and ssh_port
-    and fd.cnet in (allowed_ssh_networks_interactive)
-  exceptions:
-    - name: e_allowed_ssh_networks_incoming
-      fields: [fd.cnet, fd.is_server]
-      comps: [in, =]
-      values:
-        - [allowed_ssh_networks_incoming, true]
+    and corporate_network
   output: >
     Interactive SSH connection (connection=%fd.name
     lport=%fd.lport rport=%fd.rport fd_type=%fd.type
