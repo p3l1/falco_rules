@@ -100,6 +100,6 @@ jobs:
           --version ${{ needs.get_version_info.outputs.version }}-dev+${{ needs.get_version_info.outputs.commit_count }} \
           --tag ${{ needs.get_version_info.outputs.version }}-dev-${{ needs.get_version_info.outputs.commit_count }} \
           ghcr.io/p3l1/falco_rules:${{ needs.get_version_info.outputs.version }}-dev \
-          rules/${RULESET_FILE}
+          rules/rules/${RULESET_FILE}
         env:
           FALCOCTL_REGISTRY_AUTH_BASIC: ghcr.io,${{ github.repository_owner }},${{ secrets.GITHUB_TOKEN }}
