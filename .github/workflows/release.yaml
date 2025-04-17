@@ -1,0 +1,112 @@
+---
+    name: Build and release falco rules artifact
+    on:
+      push:
+        branches:
+          - main
+        paths:
+          - rules/**
+      workflow_dispatch:
+    
+    env:
+      RULESET_FILE: access_rules.yaml
+      OCI_REGISTRY: ghcr.io
+    
+    jobs:
+      gather_release_information:
+        runs-on: ubuntu-latest
+        timeout-minutes: 5
+        permissions:
+          contents: write
+        outputs:
+          version: ${{ steps.semver.outputs.nextStrict }}
+          version_major: ${{ steps.semver.outputs.nextMajorStrict }}
+    
+        steps:
+          - name: Checkout repository
+            uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+    
+          - name: Get semantic version
+            id: semver
+            uses: ietf-tools/semver-action@778d1d5b7af80aa43f50104116b8363e7fc0d1ef
+            with:
+              token: ${{ github.token }}
+              branch: ${{ github.ref_name }}
+              patchAll: true
+              noVersionBumpBehavior: error
+              noNewCommitBehavior: error
+              fallbackTag: 0.0.0
+    
+          - name: Create release
+            id: create_release
+            uses: ncipollo/release-action@440c8c1cb0ed28b9f43e4d1d670870f059653174
+            with:
+              allowUpdates: true
+              draft: false
+              makeLatest: true
+              name: "Falco Ruleset ${{ steps.semver.outputs.nextStrict }}"
+              tag: ${{ steps.semver.outputs.nextStrict }}
+              token: ${{ github.token }}
+    
+      build_falco_rules_artifact:
+        needs: gather_release_information
+        runs-on: ubuntu-latest
+    
+        # These permissions are needed to interact with GitHub's OIDC Token endpoint.
+        permissions:
+          id-token: write
+          contents: read
+          packages: write
+    
+        steps:
+          - name: Cache falcoctl
+            id: cache_falcoctl
+            uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684
+            with:
+              path: tools/falcoctl/falcoctl
+              key: ${{ runner.os }}-falcoctl
+    
+          - name: Checkout falcoctl repository
+            if: ${{ steps.cache_falcoctl.outputs.cache-hit != 'true' }}
+            uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+            with:
+              repository: falcosecurity/falcoctl
+              ref: main
+              path: tools/falcoctl
+    
+          - name: Setup golang
+            if: ${{ steps.cache_falcoctl.outputs.cache-hit != 'true' }}
+            uses: actions/setup-go@v4
+            with:
+              go-version: "^1.20"
+              cache-dependency-path: tools/falcoctl/go.sum
+    
+          # Only build falcoctl when the artifact download fails
+          - name: Build falcoctl from source
+            if: steps.cache_falcoctl.outputs.cache-hit != 'true'
+            run: make
+            working-directory: tools/falcoctl
+    
+          - name: Checkout rules
+            uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+            with:
+              path: rules
+    
+          - name: Get short commit sha
+            id: commit_info
+            working-directory: rules
+            run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+    
+          - name: Upload OCI artifacts to GitHub packages
+            run: |
+              tools/falcoctl/falcoctl registry push \
+              --config /dev/null \
+              --type rulesfile \
+              --tag ${{ needs.gather_release_information.outputs.version }} \
+              --tag ${{ needs.gather_release_information.outputs.version_major }} \
+              --tag ${{ steps.commit_info.outputs.sha_short }} \
+              --version ${{ needs.gather_release_information.outputs.version }} \
+              ghcr.io/p3l1/falco_rules:latest \
+              rules/rules/${RULESET_FILE}
+            env:
+              FALCOCTL_REGISTRY_AUTH_BASIC: ghcr.io,${{ github.repository_owner }},${{ secrets.GITHUB_TOKEN }}
