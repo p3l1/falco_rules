@@ -1,0 +1,15 @@
+---
+- name: access-rules
+  type: rulesfile
+  registry: ghcr.io
+  repository: p3l1/falco_rules
+  description: Falco rules that detect access to sensitive system locations and services.
+  home: https://github.com/p3l1/falco_rules/blob/main/rules/access_rules.yaml
+  keywords:
+    - access-rules
+  license: MIT
+  maintainers:
+    - email: philipp@herzo.gs
+      name: Philipp Herzog
+  sources:
+    - https://github.com/p3l1/falco_rules/blob/main/rules/access_rules.yaml
