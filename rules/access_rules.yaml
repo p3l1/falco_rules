@@ -22,7 +22,7 @@
 # This is a placeholder. You should replace it with the actual CIDR ranges
 # that are allowed in your environment.
 - macro: corporate_network
-  condition: (fd.cnet = "192.168.0.0/16")
+  condition: (fd.cnet = "0.0.0.0/0")
 
 - rule: Disallowed SSH connection
   tags: [thesis, ssh]
