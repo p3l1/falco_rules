@@ -1,0 +1,104 @@
+name: Build falco rules development artifact
+on:
+  push:
+    branches-ignore:
+      - main
+
+env:
+  RULESET_FILE: access_rules.yaml
+
+jobs:
+  get_version_info:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.semver.outputs.nextStrict }}
+      version_major: ${{ steps.semver.outputs.nextMajorStrict }}
+      commit_count: ${{ steps.commit_count.outputs.commit_count }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+
+      - name: Get semantic version
+        id: semver
+        uses: ietf-tools/semver-action@778d1d5b7af80aa43f50104116b8363e7fc0d1ef
+        with:
+          token: ${{ github.token }}
+          branch: ${{ github.ref_name }}
+          patchAll: true
+          noVersionBumpBehavior: error
+          noNewCommitBehavior: error
+
+      - name: Get commit count since last tag
+        id: commit_count
+        run: |
+          last_tag=$(git describe --tags --abbrev=0)
+          commit_count=$(git rev-list ${last_tag}..HEAD --count)
+          echo "commit_count=${commit_count}" >> $GITHUB_OUTPUT
+
+  build_falco_rules_artifact:
+    needs: get_version_info
+    runs-on: ubuntu-latest
+
+    # These permissions are needed to interact with GitHub's OIDC Token endpoint.
+    permissions:
+      id-token: write
+      contents: read
+      packages: write
+
+    steps:
+      - name: Cache falcoctl
+        id: cache_falcoctl
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684
+        with:
+          path: tools/falcoctl/falcoctl
+          key: ${{ runner.os }}-falcoctl
+
+      - name: Checkout falcoctl repository
+        if: ${{ steps.cache_falcoctl.outputs.cache-hit != 'true' }}
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          repository: falcosecurity/falcoctl
+          ref: main
+          path: tools/falcoctl
+
+      - name: Setup golang
+        if: ${{ steps.cache_falcoctl.outputs.cache-hit != 'true' }}
+        uses: actions/setup-go@cd53bc84d5e2fd85362f4cb840513e06427082d3
+        with:
+          go-version: "^1.20"
+          cache-dependency-path: tools/falcoctl/go.sum
+
+      # Only build falcoctl when the artifact download fails
+      - name: Build falcoctl from source
+        if: steps.cache_falcoctl.outputs.cache-hit != 'true'
+        run: make
+        working-directory: tools/falcoctl
+
+      - name: Checkout rules
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          path: rules
+
+      - name: Get short commit sha
+        id: commit_info
+        working-directory: rules
+        run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      # OCI tag cannot contain a plus sign, so we use a dash instead in the tag
+      # https://stackoverflow.com/questions/55044480/tagging-docker-image-semver
+      - name: Upload OCI artifacts to GitHub packages
+        run: |
+          tools/falcoctl/falcoctl registry push \
+          --config /dev/null \
+          --type rulesfile \
+          --version ${{ needs.get_version_info.outputs.version }}-dev+${{ needs.get_version_info.outputs.commit_count }} \
+          --tag ${{ needs.get_version_info.outputs.version }}-dev-${{ needs.get_version_info.outputs.commit_count }} \
+          ghcr.io/p3l1/falco_rules:${{ needs.get_version_info.outputs.version }}-dev \
+          rules/${RULESET_FILE}
+        env:
+          FALCOCTL_REGISTRY_AUTH_BASIC: ${{ env.OCI_REGISTRY }},${{ github.repository_owner }},${{ secrets.GITHUB_TOKEN }}

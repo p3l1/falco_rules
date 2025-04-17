@@ -1,0 +1,92 @@
+---
+- macro: inbound
+  condition: >
+    (((evt.type in (accept,listen) and evt.dir=<)) or
+     (fd.typechar = 4 or fd.typechar = 6) and
+     (fd.ip != "0.0.0.0" and fd.net != "127.0.0.0/8") and (evt.rawres >= 0 or evt.res = EINPROGRESS))
+
+- macro: inbound_outbound
+  condition: >
+    (((evt.type in (accept,listen,connect) and evt.dir=<)) or
+     (fd.typechar = 4 or fd.typechar = 6) and
+     (fd.ip != "0.0.0.0" and fd.net != "127.0.0.0/8") and (evt.rawres >= 0 or evt.res = EINPROGRESS))
+
+- macro: ssh_port
+  condition: (fd.sport=22)
+
+# Allowed CIDR ranges for incoming non interactive SSH connections.
+# This is a placeholder. You should replace it with the actual CIDR ranges
+# that are allowed in your environment.
+- list: allowed_ssh_networks_incoming
+  items:
+    - "0.0.0.0/0"
+
+# Allowed CIDR ranges for outgoing SSH connections.
+# This is a placeholder. You should replace it with the actual CIDR ranges
+# that are allowed in your environment.
+- list: allowed_ssh_networks_outgoing
+  items:
+    - "0.0.0.0/0"
+
+# Allowed CIDR ranges for interactive SSH connections.
+# This is a placeholder. You should replace it with the actual CIDR ranges
+# that are allowed in your environment.
+- list: allowed_ssh_networks_interactive
+  items:
+    - "0.0.0.0/0"
+
+- rule: Disallowed SSH connection
+  tags: [thesis, ssh]
+  enabled: true
+  desc: >
+    Detect any new SSH connection on `ssh_port` that is not allowed by the
+    `allowed_ssh_networks_incoming` and `allowed_ssh_networks_outgoing` lists.
+  condition: >
+    inbound_outbound
+    and ssh_port
+  exceptions:
+    - name: e_allowed_ssh_networks_outgoing
+      fields: [fd.rnet, evt.type]
+      comps: [in, =]
+      values:
+        - [allowed_ssh_networks_outgoing, connect]
+
+    - name: e_allowed_ssh_networks_incoming
+      fields: [fd.cnet, evt.type]
+      comps: [in, in]
+      values:
+        - [allowed_ssh_networks_incoming, [accept, listen]]
+  output: >
+    Disallowed SSH connection (connection=%fd.name
+    lport=%fd.lport rport=%fd.rport fd_type=%fd.type
+    fd_proto=fd.l4proto evt_type=%evt.type user=%user.name
+    user_uid=%user.uid user_loginuid=%user.loginuid
+    process=%proc.name proc_exepath=%proc.exepath
+    parent=%proc.pname command=%proc.cmdline
+    terminal=%proc.tty %container.info)
+  priority: WARNING
+
+- rule: Monitor incoming SSH connections
+  tags: [thesis, ssh, interactive]
+  enabled: true
+  desc: >
+    Monitor incoming interactive SSH connections from development and operations staff.
+  condition: >
+    inbound
+    and ssh_port
+    and fd.cnet in (allowed_ssh_networks_interactive)
+  exceptions:
+    - name: e_allowed_ssh_networks_incoming
+      fields: [fd.cnet, fd.is_server]
+      comps: [in, =]
+      values:
+        - [allowed_ssh_networks_incoming, true]
+  output: >
+    Interactive SSH connection (connection=%fd.name
+    lport=%fd.lport rport=%fd.rport fd_type=%fd.type
+    fd_proto=fd.l4proto evt_type=%evt.type user=%user.name
+    user_uid=%user.uid user_loginuid=%user.loginuid
+    process=%proc.name proc_exepath=%proc.exepath
+    parent=%proc.pname command=%proc.cmdline
+    terminal=%proc.tty %container.info)
+  priority: NOTICE

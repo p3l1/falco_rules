@@ -1,0 +1,12 @@
+---
+rulesfiles:
+  - name: access-rules
+    description: Falco rules that detect access to sensitive system locations and services.
+    authors: Philipp Herzog
+    contact: https://falco.org/community
+    maintainers:
+      - name: Philipp Herzog
+        email: philipp@herzo.gs
+    path: rules/access_rules.yaml
+    license: apache-2.0
+    url: https://github.com/p3l1/falco_rules/blob/main/rules/access_rules.yaml
