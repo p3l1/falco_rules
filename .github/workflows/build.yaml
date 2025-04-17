@@ -32,6 +32,7 @@ jobs:
           patchAll: true
           noVersionBumpBehavior: error
           noNewCommitBehavior: error
+          fallbackTag: 0.0.0
 
       - name: Get commit count since last tag
         id: commit_count
