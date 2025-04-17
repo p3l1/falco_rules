@@ -100,6 +100,7 @@ jobs:
           --version ${{ needs.get_version_info.outputs.version }}-dev+${{ needs.get_version_info.outputs.commit_count }} \
           --tag ${{ needs.get_version_info.outputs.version }}-dev-${{ needs.get_version_info.outputs.commit_count }} \
           --tag ${{ steps.commit_info.outputs.sha_short }} \
+          --tag latest-dev \
           ghcr.io/p3l1/falco_rules:${{ needs.get_version_info.outputs.version }}-dev \
           rules/rules/${RULESET_FILE}
         env:
