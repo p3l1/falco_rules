@@ -20,5 +20,5 @@ jobs:
 
       - name: Syntax check
         run: |
-          falco -V /etc/falco/falco_rules.yaml
+          falco -V /etc/falco/falco_rules.yaml \
                 -V /workspace/rules/access_rules.yaml
