@@ -124,6 +124,10 @@
   desc: >
     Detect unexpected process and port combinations.
     This rule is a placeholder and should be customized to fit your environment.
+    It is recommended to use the exceptions list to define
+    the processes and ports that are allowed to run on the system.
+    The rule will trigger on any process that is not in the exceptions list
+    and is listening on a port that is not in the exceptions list.
   condition: >
     evt.type = listen and
     (fd.typechar = 4 or fd.typechar = 6)
