@@ -80,8 +80,9 @@
   desc: >
     Detect user logins to the system via serial console.
   condition: >
+    spawned_process and
     (proc.aname=systemd-logind or proc.aname=login) and
-    (proc.aname not in (sshd, su, sudo)) and
+    (proc.aname != sshd) and
     (proc.tty != 0)
   output: >
     User login via serial console (user=%user.name user_uid=%user.uid
