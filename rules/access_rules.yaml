@@ -117,6 +117,8 @@
     user_uid=%user.uid user_loginuid=%user.loginuid
     process=%proc.name proc_exepath=%proc.exepath
     parent=%proc.pname command=%proc.cmdline
+    proc.aexe[1]=%proc.aexe[1]
+    proc.aexe[2]=%proc.aexe[2]
     terminal=%proc.tty %container.info)
   priority: WARNING
 
